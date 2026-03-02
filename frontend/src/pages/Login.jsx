@@ -55,8 +55,8 @@ export default function Login() {
             fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: '#fff',
             boxShadow: '0 0 30px rgba(0,212,232,0.3)',
           }}>✚</div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
-            ClinDoc AI
+          <h1 style={{ fontFamily: "'Lora', serif", fontSize: 22, fontWeight: 700, marginBottom: 4 }}>
+            Prescription_Generator
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 12, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
             AI-BASED CLINICAL DOCUMENTATION
@@ -129,7 +129,7 @@ export default function Login() {
           style={{ width: '100%', justifyContent: 'center', fontSize: 12, opacity: 0.85 }}
           onClick={handleDemo}
         >
-          🚀 Demo Login (NextGenHack)
+          Demo Login
         </button>
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
