@@ -1,11 +1,11 @@
 import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const client = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30000,
+  timeout: 120000, // AI processing takes long so 2 mins
 });
 
 // Auth token interceptor
@@ -29,6 +29,7 @@ client.interceptors.response.use(
 
 // ─── Auth ─────────────────────────────────────────────
 export const login = (credentials) => client.post('/auth/login', credentials);
+export const register = (credentials) => client.post('/auth/register', credentials);
 export const logout = () => client.post('/auth/logout');
 export const getMe = () => client.get('/auth/me');
 
@@ -46,10 +47,9 @@ export const updateConsultation = (id, data) => client.put(`/consultations/${id}
 export const getConsultations = (params) => client.get('/consultations', { params });
 
 // ─── Audio & Transcription ────────────────────────────
-export const uploadAudio = (consultationId, formData) =>
-  client.post(`/consultations/${consultationId}/audio`, formData, {
+export const uploadAudio = (formData) =>
+  client.post(`/consultations/upload`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120000,
   });
 
 export const getTranscript = (consultationId) =>
@@ -59,11 +59,11 @@ export const getTranscript = (consultationId) =>
 export const generateSOAP = (consultationId) =>
   client.post(`/consultations/${consultationId}/generate-soap`);
 
-export const updateSOAP = (consultationId, soapData) =>
-  client.put(`/consultations/${consultationId}/soap`, soapData);
+export const updateSOAP = (noteId, soapData) => 
+  client.patch(`/notes/${noteId}`, soapData);
 
-export const getSOAP = (consultationId) =>
-  client.get(`/consultations/${consultationId}/soap`);
+export const getSOAP = (consultationId) => 
+  client.get(`/notes/${consultationId}`);
 
 // ─── Prescriptions ────────────────────────────────────
 export const generatePrescription = (consultationId) =>
@@ -80,7 +80,8 @@ export const exportPrescriptionPDF = (consultationId) =>
 
 // ─── EHR ──────────────────────────────────────────────
 export const getEHRRecord = (patientId) => client.get(`/ehr/${patientId}`);
-export const exportFHIR = (patientId) => client.get(`/ehr/${patientId}/fhir`);
+export const exportFHIR = (noteId) => 
+  client.get(`/notes/${noteId}/export/fhir`);
 
 // ─── Dashboard ────────────────────────────────────────
 export const getDashboardStats = () => client.get('/dashboard/stats');
