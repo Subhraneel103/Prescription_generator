@@ -117,12 +117,13 @@ export default function EHRDashboard({ patientId }) {
     setLoading(true);
     api.getEHRRecord(patientId)
       .then(setEhr)
-      .catch(() => setEhr(MOCK_EHR))
+      .catch(() => setEhr(null))
       .finally(() => setLoading(false));
   }, [patientId]);
 
   // Use mock if no patientId
-  const data = ehr || (patientId ? null : MOCK_EHR);
+  //const data = ehr || (patientId ? null : MOCK_EHR);
+  const data = ehr;
 
   if (loading) return (
     <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
@@ -130,10 +131,12 @@ export default function EHRDashboard({ patientId }) {
     </div>
   );
 
-  if (!data) return (
+if (!data) return (
     <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
       <div style={{ fontSize: 32, marginBottom: 10 }}>🏥</div>
-      <p style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>Select a patient to view EHR</p>
+      <p style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+        No records found for this patient yet.<br />Records will appear after consultations are saved.
+      </p>
     </div>
   );
 
