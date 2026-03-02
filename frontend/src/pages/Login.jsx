@@ -54,9 +54,9 @@ export default function Login() {
             borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: '#fff',
             boxShadow: '0 0 30px rgba(0,212,232,0.3)',
-          }}>✚</div>
+          }}>💊</div>
           <h1 style={{ fontFamily: "'Lora', serif", fontSize: 22, fontWeight: 700, marginBottom: 4 }}>
-            Prescription_Generator
+            PrescribeAI
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 12, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
             AI-BASED CLINICAL DOCUMENTATION
