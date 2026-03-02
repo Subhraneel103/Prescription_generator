@@ -207,7 +207,9 @@ const processConsultationAudio = useCallback(async () => {
     
     try {
       const formData = new FormData();
-      formData.append('audio', state.audioBlob, 'recording.webm');
+      const fileName = state.audioBlob.name || 'recording.webm';
+      formData.append('audio', state.audioBlob, fileName);
+      
       formData.append('patient_id', state.currentPatient.id);
 
       // This single call hits Flask, runs Whisper, runs Llama-3, and saves to SQLite

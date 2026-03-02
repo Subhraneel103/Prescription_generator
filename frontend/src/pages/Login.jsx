@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useConsultation } from '../context/ConsultationContext';
+import * as api from '../api/client';
 
 const EyeIcon = ({ open }) => open ? (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -23,8 +24,8 @@ function ForgotPassword({ onBack }) {
     e.preventDefault();
     if (!email) return;
     setLoading(true);
-    // TODO: call real forgot password API here
-    await new Promise((r) => setTimeout(r, 1200)); // simulated delay
+    // Note: Forgot password is not implemented on the backend yet, simulating delay
+    await new Promise((r) => setTimeout(r, 1200)); 
     setSent(true);
     setLoading(false);
   };
@@ -116,11 +117,21 @@ function SignUp({ onBack }) {
     if (form.password.length < 6) {
       setError('Password must be at least 6 characters'); return;
     }
+    
     setLoading(true);
-    // TODO: call real signup API here
-    await new Promise((r) => setTimeout(r, 1400)); // simulated delay
-    setSuccess(true);
-    setLoading(false);
+    try {
+      // Hit the Flask /api/auth/register endpoint
+      // Note: We use the email field as the 'username' in our backend model
+      await api.register({
+        username: form.email, 
+        password: form.password
+      });
+      setSuccess(true);
+    } catch (err) {
+      setError(err.message || 'Registration failed. Email might already exist.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) return (
@@ -130,7 +141,7 @@ function SignUp({ onBack }) {
         Account Created!
       </h2>
       <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 24 }}>
-        Welcome, {form.name}. You can now log in.
+        Welcome, Dr. {form.name}. You can now log in.
       </p>
       <button className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }} onClick={onBack}>
         Go to Login
@@ -279,12 +290,27 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e?.preventDefault();
     if (!form.email || !form.password) { setError('Please fill in all fields'); return; }
+    
     setLoading(true);
     try {
-      const ok = await loginUser(form);
-      if (ok) return;
-    } catch (_) {}
-    goDashboard();
+      // Hit the Flask /api/auth/login endpoint
+      // Note: We use the email field as the 'username' in our backend model
+      const ok = await loginUser({
+        username: form.email,
+        password: form.password
+      });
+      
+      // If the backend returned a JWT token, loginUser handles localStorage, so we just redirect
+      if (ok) {
+        window.location.href = '/';
+      } else {
+        setError('Invalid email or password');
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (view === 'forgot') return (
@@ -365,7 +391,6 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Forgot password link */}
           <div style={{ textAlign: 'right', marginTop: -8 }}>
             <button
               type="button"
@@ -402,7 +427,6 @@ export default function Login() {
 
         <div className="divider" style={{ margin: '20px 0' }} />
 
-        {/* Sign up link */}
         <button
           className="btn btn-secondary"
           style={{ width: '100%', justifyContent: 'center', fontSize: 13, marginBottom: 10 }}
@@ -416,7 +440,7 @@ export default function Login() {
           style={{ width: '100%', justifyContent: 'center', fontSize: 12, opacity: 1 }}
           onClick={goDashboard}
         >
-          Demo Login
+          Demo Login (Offline Mode)
         </button>
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>

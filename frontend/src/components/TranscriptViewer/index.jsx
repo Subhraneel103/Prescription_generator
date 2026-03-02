@@ -21,10 +21,11 @@ const CheckIcon = () => (
   </svg>
 );
 
-// Highlights doctor/patient speaker segments
-function formatTranscript(text) {
-  if (!text) return null;
-  const lines = text.split('\n');
+// Highlights doctor/patient speaker segments safely
+function formatTranscript(safeText) {
+  if (!safeText) return null;
+
+  const lines = safeText.split('\n');
   return lines.map((line, i) => {
     const isDoctor = /^(Dr\.|Doctor|D:)/i.test(line);
     const isPatient = /^(Patient|P:|Pt:)/i.test(line);
@@ -47,8 +48,14 @@ export default function TranscriptViewer() {
   const [editValue, setEditValue] = useState('');
   const [copied, setCopied] = useState(false);
 
+  // 100% BULLETPROOF STRING EXTRACTION
+  // This ensures no matter what the backend sends (Object, null, undefined, array), it forces it into a safe string.
+  const transcriptStr = typeof transcript === 'string' 
+    ? transcript 
+    : (transcript?.text ? String(transcript.text) : (transcript ? JSON.stringify(transcript) || "" : ""));
+
   const handleEdit = () => {
-    setEditValue(transcript);
+    setEditValue(transcriptStr);
     setEditing(true);
   };
 
@@ -58,12 +65,12 @@ export default function TranscriptViewer() {
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(transcript);
+    navigator.clipboard.writeText(transcriptStr);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const isEmpty = !transcript && transcriptStatus !== 'processing';
+  const isEmpty = !transcriptStr && transcriptStatus !== 'processing';
 
   return (
     <div className="card fade-in" style={{ height: '100%' }}>
@@ -74,7 +81,7 @@ export default function TranscriptViewer() {
           {transcriptStatus === 'done' && <span className="tag tag-green" style={{ fontSize: 10 }}>Live</span>}
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          {transcript && (
+          {transcriptStr && (
             <>
               <button className="btn btn-ghost btn-sm" onClick={handleCopy}>
                 {copied ? <CheckIcon /> : <CopyIcon />} {copied ? 'Copied' : 'Copy'}
@@ -137,24 +144,26 @@ export default function TranscriptViewer() {
               lineHeight: 1.7,
               padding: 0,
               color: 'var(--text-primary)',
+              width: '100%'
             }}
           />
         ) : (
-          transcript && (
+          transcriptStr && (
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
-              {formatTranscript(transcript)}
+              {formatTranscript(transcriptStr)}
             </div>
           )
         )}
       </div>
 
-      {transcript && !editing && (
+      {/* Safe Word Count using the guaranteed string */}
+      {transcriptStr && !editing && (
         <div style={{ marginTop: 10, display: 'flex', gap: 16 }}>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-            {transcript.split(' ').length} words
+            {transcriptStr.split(/\s+/).filter(Boolean).length} words
           </span>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-            {transcript.length} chars
+            {transcriptStr.length} chars
           </span>
         </div>
       )}

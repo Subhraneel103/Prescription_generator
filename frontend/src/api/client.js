@@ -34,8 +34,8 @@ export const logout = () => client.post('/auth/logout');
 export const getMe = () => client.get('/auth/me');
 
 // ─── Patients ─────────────────────────────────────────
+export const getPatients = () => client.get('/patients'); // <--- ADD THIS LINE
 export const searchPatients = (query) => client.get('/patients/search', { params: { q: query } });
-export const getPatient = (id) => client.get(`/patients/${id}`);
 export const createPatient = (data) => client.post('/patients', data);
 export const updatePatient = (id, data) => client.put(`/patients/${id}`, data);
 export const getPatientHistory = (id) => client.get(`/patients/${id}/history`);
