@@ -88,9 +88,9 @@ function Sidebar({ onLogout }) {
   return (
     <nav className="sidebar">
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">✚</div>
+        <div className="sidebar-logo-icon">💊</div>
         <div>
-          <div className="sidebar-logo-text">Prescription_Generator</div>
+          <div className="sidebar-logo-text" style={{fontSize: '22px'}}>PrescribeAI</div>
         </div>
       </div>
 
