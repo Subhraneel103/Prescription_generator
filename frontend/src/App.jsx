@@ -90,7 +90,7 @@ function Sidebar({ onLogout }) {
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">💊</div>
         <div>
-          <div className="sidebar-logo-text" style={{fontSize: '22px'}}>PrescribeAI</div>
+          <div className="sidebar-logo-text" style={{fontSize: '22px'}}>PrescribAI</div>
         </div>
       </div>
 
