@@ -40,7 +40,7 @@ export default function Dashboard() {
   return (
     <div className="page-content fade-in">
       <div className="page-header">
-        <h1>{greeting()}, {user?.name || 'Dr. Anon'} 👋</h1>
+        <h1 style={{ fontFamily: "'Lora', serif" }}>{greeting()}, {user?.name || 'Dr. Anonymous'}</h1>
         <p>Here's your consultation overview for today — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</p>
       </div>
 
