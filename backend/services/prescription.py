@@ -1,7 +1,12 @@
 import json
 from openai import OpenAI
-
-client = OpenAI()
+import os
+import dotenv
+dotenv.load_dotenv()
+client = OpenAI(
+    api_key=os.environ.get("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
 
 def extract_prescriptions(plan_text: str) -> list[dict]:
     prompt = f"""
@@ -14,7 +19,7 @@ def extract_prescriptions(plan_text: str) -> list[dict]:
     """
     
     response = client.chat.completions.create(
-        model="gpt-4.1",
+        model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.0,
         response_format={ "type": "json_object" } 
@@ -26,7 +31,7 @@ def extract_prescriptions(plan_text: str) -> list[dict]:
     prompt_adjusted = prompt + "\nWrap the array in a JSON object with the key 'prescriptions'."
     
     response = client.chat.completions.create(
-        model="gpt-4.1",
+        model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt_adjusted}],
         temperature=0.0,
         response_format={ "type": "json_object" }

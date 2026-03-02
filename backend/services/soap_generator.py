@@ -1,7 +1,12 @@
 import json
 from openai import OpenAI
-
-client = OpenAI() # Assumes OPENAI_API_KEY is in your environment
+import dotenv
+dotenv.load_dotenv()
+import os
+client = OpenAI(
+    api_key=os.environ.get("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+) 
 
 def generate_soap(transcript: str) -> dict:
     prompt = f"""
@@ -14,7 +19,7 @@ def generate_soap(transcript: str) -> dict:
     """
     
     response = client.chat.completions.create(
-        model="gpt-4.1",
+        model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
         response_format={ "type": "json_object" } # Forces strict JSON return

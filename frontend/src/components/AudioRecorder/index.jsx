@@ -63,8 +63,9 @@ function Waveform({ active }) {
             background: active ? 'var(--accent-cyan)' : 'var(--border-bright)',
             borderRadius: 2,
             transition: active ? 'none' : 'height 0.4s ease',
-            animation: active ? `wave ${0.6 + (i % 4) * 0.15}s ease-in-out infinite` : 'none',
-            animationDelay: active ? `${i * 0.07}s` : '0s',
+            
+            /* REPLACE your two animation lines with this single combined line: */
+            animation: active ? `wave ${0.6 + (i % 4) * 0.15}s ease-in-out ${i * 0.07}s infinite` : 'none',
           }}
         />
       ))}
@@ -116,7 +117,7 @@ export default function AudioRecorder({ onAudioReady }) {
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
       chunksRef.current = [];
       
       // Tell Flask we are starting a live stream

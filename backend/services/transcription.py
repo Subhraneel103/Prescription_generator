@@ -1,13 +1,15 @@
 import whisper
-import os
+import torch
 
-# Load model globally to avoid reloading on every request (keeps the API fast)
-# Using 'base' model for speed; switch to 'small' or 'medium' for better accuracy if hardware permits
-model = whisper.load_model("base")
+# Load model globally to save memory
+# Use fp16=False to prevent the CPU warning/error
+model = whisper.load_model("base", device="cpu")
 
-def transcribe_audio(audio_path: str) -> str:
-    if not os.path.exists(audio_path):
-        raise FileNotFoundError(f"Audio file not found: {audio_path}")
-    
-    result = model.transcribe(audio_path)
-    return result["text"].strip()
+def transcribe_audio(file_path):
+    try:
+        # Explicitly set fp16=False for CPU processing
+        result = model.transcribe(file_path, fp16=False)
+        return result["text"]
+    except Exception as e:
+        print(f"Transcription error: {str(e)}")
+        return None

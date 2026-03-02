@@ -16,50 +16,29 @@ const SaveIcon = () => (
 );
 
 const SOAP_FIELDS = [
-  {
-    key: 'subjective',
-    label: 'S — Subjective',
-    abbr: 'S',
-    placeholder: "Patient's chief complaint, history of present illness, symptoms, pain levels, relevant medical/social history...",
-    accent: 'var(--accent-cyan)',
-    tagClass: 'tag-cyan',
-    className: 'soap-s',
-  },
-  {
-    key: 'objective',
-    label: 'O — Objective',
-    abbr: 'O',
-    placeholder: 'Vital signs, physical examination findings, lab results, imaging, measurable data...',
-    accent: 'var(--accent-blue)',
-    tagClass: 'tag-blue',
-    className: 'soap-o',
-  },
-  {
-    key: 'assessment',
-    label: 'A — Assessment',
-    abbr: 'A',
-    placeholder: 'Diagnosis, differential diagnoses, clinical impression, problem list...',
-    accent: 'var(--accent-amber)',
-    tagClass: 'tag-amber',
-    className: 'soap-a',
-  },
-  {
-    key: 'plan',
-    label: 'P — Plan',
-    abbr: 'P',
-    placeholder: 'Treatment plan, medications, referrals, patient education, follow-up instructions...',
-    accent: 'var(--accent-green)',
-    tagClass: 'tag-green',
-    className: 'soap-p',
-  },
+  { key: 'subjective', label: 'S — Subjective', abbr: 'S', placeholder: "Patient's chief complaint...", accent: 'var(--accent-cyan)', className: 'soap-s' },
+  { key: 'objective', label: 'O — Objective', abbr: 'O', placeholder: 'Vital signs, findings...', accent: 'var(--accent-blue)', className: 'soap-o' },
+  { key: 'assessment', label: 'A — Assessment', abbr: 'A', placeholder: 'Diagnosis...', accent: 'var(--accent-amber)', className: 'soap-a' },
+  { key: 'plan', label: 'P — Plan', abbr: 'P', placeholder: 'Treatment plan...', accent: 'var(--accent-green)', className: 'soap-p' },
 ];
 
 export default function SOAPNoteEditor() {
   const { soap, soapStatus, generateSOAP, updateSOAPField, saveSOAP, consultation } = useConsultation();
   const [saving, setSaving] = useState(false);
 
+  // CRASH PREVENTION: Ensure every field is treated as a string
+  const getSafeVal = (val) => {
+    if (!val) return "";
+    return typeof val === 'string' ? val : JSON.stringify(val);
+  };
+
   const isGenerating = soapStatus === 'processing';
-  const hasContent = Object.values(soap).some((v) => v.trim());
+  
+  // FIXED: Bulletproof content check
+  const hasContent = Object.values(soap || {}).some((v) => {
+    const safeV = getSafeVal(v);
+    return safeV && safeV.trim().length > 0;
+  });
 
   const handleSave = async () => {
     setSaving(true);
@@ -76,16 +55,8 @@ export default function SOAPNoteEditor() {
           {soapStatus === 'done' && <span className="tag tag-green" style={{ fontSize: 10 }}>AI Generated</span>}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={generateSOAP}
-            disabled={isGenerating || !consultation}
-          >
-            {isGenerating ? (
-              <><div className="loading-spinner" style={{ width: 14, height: 14 }} /> Generating...</>
-            ) : (
-              <><SparkleIcon /> Generate SOAP</>
-            )}
+          <button className="btn btn-primary btn-sm" onClick={generateSOAP} disabled={isGenerating || !consultation}>
+            {isGenerating ? <><div className="loading-spinner" style={{ width: 14, height: 14 }} /> Generating...</> : <><SparkleIcon /> Generate SOAP</>}
           </button>
           {hasContent && (
             <button className="btn btn-secondary btn-sm" onClick={handleSave} disabled={saving}>
@@ -96,79 +67,43 @@ export default function SOAPNoteEditor() {
         </div>
       </div>
 
-      {!consultation && (
-        <div style={{
-          background: 'rgba(245, 158, 11, 0.05)',
-          border: '1px solid rgba(245, 158, 11, 0.2)',
-          borderRadius: 'var(--radius-sm)',
-          padding: '10px 14px',
-          marginBottom: 16,
-          fontSize: 12,
-          color: 'var(--accent-amber)',
-          fontFamily: 'var(--font-mono)',
-        }}>
-          ⚠ Start a consultation session to enable SOAP generation
-        </div>
-      )}
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {SOAP_FIELDS.map(({ key, label, abbr, placeholder, accent, tagClass, className }) => (
-          <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{
-                width: 22, height: 22,
-                borderRadius: 4,
-                background: `${accent}20`,
-                border: `1px solid ${accent}40`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: 11,
-                color: accent,
-              }}>
-                {abbr}
+        {SOAP_FIELDS.map(({ key, label, abbr, placeholder, accent, className }) => {
+          const value = getSafeVal(soap[key]);
+          return (
+            <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 22, height: 22, borderRadius: 4, background: `${accent}20`, border: `1px solid ${accent}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11, color: accent }}>
+                  {abbr}
+                </div>
+                <label style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: accent, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  {label}
+                </label>
+                {value && (
+                  <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                    {value.split(/\s+/).filter(Boolean).length} words
+                  </span>
+                )}
               </div>
-              <label style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 11,
-                color: accent,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-              }}>
-                {label}
-              </label>
-              {soap[key] && (
-                <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                  {soap[key].split(' ').length} words
-                </span>
-              )}
+              <textarea
+                className={`textarea ${className}`}
+                value={value}
+                onChange={(e) => updateSOAPField(key, e.target.value)}
+                placeholder={placeholder}
+                style={{
+                  minHeight: 90,
+                  background: isGenerating && !value ? 'var(--bg-elevated)' : 'var(--bg-secondary)',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 13.5,
+                  lineHeight: 1.65,
+                  paddingLeft: 14,
+                  borderLeft: `3px solid ${accent}`,
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              />
             </div>
-            <textarea
-              className={`textarea ${className}`}
-              value={soap[key]}
-              onChange={(e) => updateSOAPField(key, e.target.value)}
-              placeholder={placeholder}
-              style={{
-                minHeight: 90,
-                background: isGenerating && !soap[key] ? 'var(--bg-elevated)' : 'var(--bg-secondary)',
-                fontFamily: 'var(--font-body)',
-                fontSize: 13.5,
-                lineHeight: 1.65,
-                paddingLeft: 14,
-                borderLeftWidth: 3,
-                borderLeftColor: accent,
-                borderLeftStyle: 'solid',
-                borderTopColor: 'var(--border)',
-                borderRightColor: 'var(--border)',
-                borderBottomColor: 'var(--border)',
-                borderTopWidth: 1,
-                borderRightWidth: 1,
-                borderBottomWidth: 1,
-                borderRadius: 'var(--radius-sm)',
-              }}
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

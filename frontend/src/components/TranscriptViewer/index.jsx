@@ -51,8 +51,8 @@ export default function TranscriptViewer() {
   // 100% BULLETPROOF STRING EXTRACTION
   // This ensures no matter what the backend sends (Object, null, undefined, array), it forces it into a safe string.
   const transcriptStr = typeof transcript === 'string' 
-    ? transcript 
-    : (transcript?.text ? String(transcript.text) : (transcript ? JSON.stringify(transcript) || "" : ""));
+  ? transcript 
+  : (transcript?.text ? String(transcript.text) : "");
 
   const handleEdit = () => {
     setEditValue(transcriptStr);

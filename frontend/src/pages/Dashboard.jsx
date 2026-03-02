@@ -3,18 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useConsultation } from '../context/ConsultationContext';
 import * as api from '../api/client';
 
+// Fallback data if the backend database is empty or unreachable
 const MOCK_STATS = {
-  todayConsultations: 6,
-  pendingNotes: 1,
-  totalPatients: 142,
-  avgDuration: '14 min',
+  todayConsultations: 0,
+  pendingNotes: 0,
+  totalPatients: 0,
+  avgDuration: '0 min',
 };
-
-const MOCK_RECENT = [
-  { id: 'c1', patientName: 'Priya Sharma', time: '09:30 AM', diagnosis: 'Hypertension', soapReady: true, status: 'complete' },
-  { id: 'c2', patientName: 'Rajesh Kumar', time: '11:15 AM', diagnosis: 'T2 Diabetes', soapReady: true, status: 'complete' },
-  { id: 'c3', patientName: 'Anita Patel', time: '02:00 PM', diagnosis: 'Asthma follow-up', soapReady: false, status: 'pending-notes' },
-];
 
 const STATUS_MAP = {
   'complete': { label: 'Complete', tagClass: 'tag-green' },
@@ -28,11 +23,40 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [recent, setRecent] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // If the backend routes don't exist yet, it catches the error and populates the beautiful UI with mock data
-    api.getDashboardStats().then(setStats).catch(() => setStats(MOCK_STATS));
-    api.getRecentConsultations().then(setRecent).catch(() => setRecent(MOCK_RECENT));
+    const loadDashboardData = async () => {
+      try {
+        // Fetch real data from your clinic.db via the Flask backend
+        const [statsRes, recentRes] = await Promise.all([
+          api.getDashboardStats(),
+          api.getRecentConsultations()
+        ]);
+        
+        setStats(statsRes);
+
+        // Map backend naming conventions (SQL) to frontend UI keys
+        const formattedRecent = (recentRes.consultations || recentRes || []).map(c => ({
+          id: c.id,
+          patientName: c.patient_name || "Unknown Patient",
+          time: c.time || new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          diagnosis: c.diagnosis || "No diagnosis recorded",
+          soapReady: !!c.soap_ready,
+          status: c.status || 'complete'
+        }));
+
+        setRecent(formattedRecent);
+      } catch (err) {
+        console.warn("Backend unreachable or routes missing. Showing placeholder data.");
+        // We keep the UI beautiful even if the server is starting up
+        setStats(MOCK_STATS);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
   }, []);
 
   const s = stats || MOCK_STATS;
@@ -43,6 +67,14 @@ export default function Dashboard() {
     if (h < 17) return 'Good afternoon';
     return 'Good evening';
   };
+
+  if (loading) {
+    return (
+      <div className="page-content fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <div className="loading-spinner" />
+      </div>
+    );
+  }
 
   return (
     <div className="page-content fade-in">
@@ -64,18 +96,19 @@ export default function Dashboard() {
           <span className="stat-value" style={{ color: 'var(--accent-cyan)' }}>{s.todayConsultations}</span>
           <span className="stat-sub">Sessions today</span>
         </div>
+
         <div className="stat-box">
           <div className="stat-icon" style={{ background: 'rgba(239,68,68,0.1)' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+              <polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
             </svg>
           </div>
           <span className="stat-label">Pending Notes</span>
           <span className="stat-value" style={{ color: 'var(--accent-red)' }}>{s.pendingNotes}</span>
           <span className="stat-sub">Requires attention</span>
         </div>
+
         <div className="stat-box">
           <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.1)' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -86,6 +119,7 @@ export default function Dashboard() {
           <span className="stat-value" style={{ color: 'var(--accent-green)' }}>{s.totalPatients}</span>
           <span className="stat-sub">Active records</span>
         </div>
+
         <div className="stat-box">
           <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.1)' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -98,7 +132,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Today's Sessions */}
+      {/* Today's Sessions Table */}
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-header">
           <div className="card-title">
@@ -111,16 +145,10 @@ export default function Dashboard() {
         </div>
 
         {recent.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '40px 20px',
-            background: 'var(--bg-secondary)',
-            border: '1px dashed var(--border)',
-            borderRadius: 'var(--radius-md)',
-          }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🩺</div>
+          <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--bg-secondary)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-md)' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🩺</div>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, fontFamily: 'var(--font-mono)' }}>
-              No sessions yet today.<br />Start a consultation to see it here.
+              No sessions found in the database.<br />Start a consultation to see live data.
             </p>
           </div>
         ) : (
@@ -141,12 +169,12 @@ export default function Dashboard() {
                 return (
                   <tr key={c.id}>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{
-                          width: 28, height: 28, borderRadius: 7,
-                          background: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(59,130,246,0.3))',
+                          width: 30, height: 30, borderRadius: 8,
+                          background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-cyan))',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 12, color: 'var(--text-primary)',
+                          fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 13, color: '#fff',
                         }}>{c.patientName.charAt(0)}</div>
                         <span style={{ fontWeight: 600 }}>{c.patientName}</span>
                       </div>
@@ -160,11 +188,7 @@ export default function Dashboard() {
                     </td>
                     <td><span className={`tag ${st.tagClass}`} style={{ fontSize: 10 }}>{st.label}</span></td>
                     <td>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => navigate('/consultation')}
-                        style={{ fontSize: 11 }}
-                      >
+                      <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/consultation/${c.id}`)}>
                         Open →
                       </button>
                     </td>
@@ -176,18 +200,18 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Quick action */}
-      <div style={{ background: 'linear-gradient(135deg, rgba(0,212,232,0.05), rgba(59,130,246,0.05))', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Action Footer */}
+      <div style={{ background: 'linear-gradient(135deg, rgba(0,212,232,0.08), rgba(59,130,246,0.08))', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
-            Start a new AI-powered consultation
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
+            Ready to record a new session?
           </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-            Record or upload audio → Auto-transcribe → Generate SOAP notes → Prescribe
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13, maxWidth: 500 }}>
+            Our AI pipeline will automatically transcribe the audio, generate structured SOAP clinical notes, and extract medication plans for you.
           </p>
         </div>
         <button className="btn btn-primary btn-lg" onClick={() => navigate('/consultation')}>
-          Begin Session →
+          Begin AI Session →
         </button>
       </div>
     </div>

@@ -39,34 +39,37 @@ def upload_consultation():
 
         # 5. Save everything to SQLite Database via SQLAlchemy
         # doctor_id = get_jwt_identity() # Use this when JWT is active
-        doctor_id = 1 # Mocked for now
-        
+
+        doctor_id=1
+
         consultation = Consultation(
             patient_id=patient_id,
             doctor_id=doctor_id,
             audio_file=filepath,
-            raw_transcript=transcript
+            raw_transcript=str(transcript) # Force string conversion
         )
         db.session.add(consultation)
-        db.session.flush() # Get consultation ID without committing yet
+        db.session.flush()
 
+        # Ensure these are strings, not dictionaries
         soap_note = SOAPNote(
             consultation_id=consultation.id,
-            subjective=soap_data.get('subjective', ''),
-            objective=soap_data.get('objective', ''),
-            assessment=soap_data.get('assessment', ''),
-            plan=soap_data.get('plan', '')
+            subjective=str(soap_data.get('subjective', '')),
+            objective=str(soap_data.get('objective', '')),
+            assessment=str(soap_data.get('assessment', '')),
+            plan=str(soap_data.get('plan', ''))
         )
         db.session.add(soap_note)
         db.session.flush()
 
         for rx in prescriptions_data:
+            # If rx is a dict, get() works; if it's already a string, this needs handling
             prescription = Prescription(
                 soap_note_id=soap_note.id,
-                medicine_name=rx.get('medicine_name', ''),
-                dosage=rx.get('dosage', ''),
-                frequency=rx.get('frequency', ''),
-                duration=rx.get('duration', '')
+                medicine_name=str(rx.get('medicine_name', '')),
+                dosage=str(rx.get('dosage', '')),
+                frequency=str(rx.get('frequency', '')),
+                duration=str(rx.get('duration', ''))
             )
             db.session.add(prescription)
 
