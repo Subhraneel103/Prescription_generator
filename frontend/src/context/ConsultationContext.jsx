@@ -197,21 +197,42 @@ export function ConsultationProvider({ children }) {
   }, []);
 
   // ── Transcription ──
-  const transcribeAudio = useCallback(async () => {
-    if (!state.consultation || !state.audioBlob) return;
+const processConsultationAudio = useCallback(async () => {
+    // Requires a selected patient and an audio file
+    if (!state.currentPatient || !state.audioBlob) return;
+    
     dispatch({ type: ACTIONS.SET_TRANSCRIPT_STATUS, payload: 'processing' });
+    dispatch({ type: ACTIONS.SET_SOAP_STATUS, payload: 'processing' });
+    dispatch({ type: ACTIONS.SET_PRESCRIPTION_STATUS, payload: 'processing' });
+    
     try {
       const formData = new FormData();
       formData.append('audio', state.audioBlob, 'recording.webm');
-      const res = await api.uploadAudio(state.consultation.id, formData);
+      formData.append('patient_id', state.currentPatient.id);
+
+      // This single call hits Flask, runs Whisper, runs Llama-3, and saves to SQLite
+      const res = await api.uploadAudio(formData);
+      
+      // Update the entire UI state at once
+      dispatch({ type: ACTIONS.SET_CONSULTATION, payload: { id: res.consultation_id } });
       dispatch({ type: ACTIONS.SET_TRANSCRIPT, payload: res.transcript });
       dispatch({ type: ACTIONS.SET_TRANSCRIPT_STATUS, payload: 'done' });
-      notify('Transcription complete', 'success');
+      
+      dispatch({ type: ACTIONS.SET_SOAP, payload: res.soap_note });
+      dispatch({ type: ACTIONS.SET_SOAP_STATUS, payload: 'done' });
+      
+      dispatch({ type: ACTIONS.SET_PRESCRIPTION, payload: res.prescriptions });
+      dispatch({ type: ACTIONS.SET_PRESCRIPTION_STATUS, payload: 'done' });
+      
+      notify('AI processing complete!', 'success');
     } catch (err) {
       dispatch({ type: ACTIONS.SET_TRANSCRIPT_STATUS, payload: 'error' });
-      notify('Transcription failed', 'error');
+      dispatch({ type: ACTIONS.SET_SOAP_STATUS, payload: 'error' });
+      dispatch({ type: ACTIONS.SET_PRESCRIPTION_STATUS, payload: 'error' });
+      notify('AI processing failed. Check console.', 'error');
+      console.error(err);
     }
-  }, [state.consultation, state.audioBlob, notify]);
+  }, [state.currentPatient, state.audioBlob, notify]);
 
   const setTranscript = useCallback((text) => {
     dispatch({ type: ACTIONS.SET_TRANSCRIPT, payload: text });
@@ -276,7 +297,7 @@ export function ConsultationProvider({ children }) {
     setAudio,
     setRecording,
     setRecordingDuration,
-    transcribeAudio,
+    processConsultationAudio,
     setTranscript,
     generateSOAP,
     updateSOAPField,

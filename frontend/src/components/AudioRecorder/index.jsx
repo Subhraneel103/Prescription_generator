@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useConsultation } from '../../context/ConsultationContext';
+import { io } from 'socket.io-client';
+
+// Connect to Flask WebSocket server
+const socket = io('http://localhost:5000', { autoConnect: false });
 
 // ─── Icons ─────────────────────────────────────────────
 const MicIcon = () => (
@@ -22,12 +26,6 @@ const UploadIcon = () => (
 const StopIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-  </svg>
-);
-
-const PlayIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="5 3 19 12 5 21 5 3"/>
   </svg>
 );
 
@@ -82,7 +80,17 @@ function Waveform({ active }) {
 
 // ─── Main Component ───────────────────────────────────
 export default function AudioRecorder({ onAudioReady }) {
-  const { isRecording, setRecording, setAudio, audioUrl, audioBlob, transcribeAudio, transcriptStatus, notify } = useConsultation();
+  const { 
+    isRecording, 
+    setRecording, 
+    setAudio, 
+    audioUrl, 
+    processConsultationAudio, // We use the combined AI pipeline function here
+    transcriptStatus, 
+    notify,
+    setTranscript 
+  } = useConsultation();
+  
   const [duration, setDuration] = useState(0);
   const [mode, setMode] = useState('idle'); // idle | recording | recorded | uploaded
 
@@ -90,13 +98,38 @@ export default function AudioRecorder({ onAudioReady }) {
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const sessionIdRef = useRef(`session_${Date.now()}`);
+
+  // ─── Socket Initialization ───
+  useEffect(() => {
+    socket.connect();
+    socket.on('live_transcript', (data) => {
+      setTranscript((prev) => prev + " " + data.text);
+    });
+    
+    return () => {
+      socket.disconnect();
+      clearInterval(timerRef.current);
+    };
+  }, [setTranscript]);
 
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       chunksRef.current = [];
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      
+      // Tell Flask we are starting a live stream
+      socket.emit('start_stream', { session_id: sessionIdRef.current });
+
+      mr.ondataavailable = (e) => { 
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data); 
+          // Send live chunk to Flask for instant Whisper transcription
+          socket.emit('audio_chunk', { session_id: sessionIdRef.current, audio_data: e.data });
+        }
+      };
+      
       mr.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const url = URL.createObjectURL(blob);
@@ -104,7 +137,9 @@ export default function AudioRecorder({ onAudioReady }) {
         setMode('recorded');
         stream.getTracks().forEach((t) => t.stop());
       };
-      mr.start(250);
+      
+      // Capture audio in 3-second chunks for the live stream
+      mr.start(3000); 
       mediaRecorderRef.current = mr;
       setRecording(true);
       setDuration(0);
@@ -118,14 +153,17 @@ export default function AudioRecorder({ onAudioReady }) {
   const stopRecording = useCallback(() => {
     mediaRecorderRef.current?.stop();
     clearInterval(timerRef.current);
+    socket.emit('stop_stream', { session_id: sessionIdRef.current });
     setRecording(false);
+    sessionIdRef.current = `session_${Date.now()}`; // Reset for next time
   }, [setRecording]);
 
   const discardRecording = useCallback(() => {
     setAudio(null, null);
+    setTranscript(""); // Clear any live transcript text
     setMode('idle');
     setDuration(0);
-  }, [setAudio]);
+  }, [setAudio, setTranscript]);
 
   const handleFileUpload = useCallback((e) => {
     const file = e.target.files[0];
@@ -137,11 +175,11 @@ export default function AudioRecorder({ onAudioReady }) {
   }, [setAudio, notify]);
 
   const handleTranscribe = useCallback(async () => {
-    await transcribeAudio();
+    // This now hits the Flask POST /api/consultations/upload route, 
+    // generating the final SOAP note and Prescriptions
+    await processConsultationAudio(); 
     if (onAudioReady) onAudioReady();
-  }, [transcribeAudio, onAudioReady]);
-
-  useEffect(() => () => clearInterval(timerRef.current), []);
+  }, [processConsultationAudio, onAudioReady]);
 
   const isProcessing = transcriptStatus === 'processing';
 
@@ -218,9 +256,9 @@ export default function AudioRecorder({ onAudioReady }) {
               disabled={isProcessing}
             >
               {isProcessing ? (
-                <><div className="loading-spinner" style={{ width: 16, height: 16, marginRight: 4 }} /> Transcribing...</>
+                <><div className="loading-spinner" style={{ width: 16, height: 16, marginRight: 4 }} /> AI Processing...</>
               ) : (
-                <><CheckIcon /> Transcribe</>
+                <><CheckIcon /> Generate AI Notes</>
               )}
             </button>
             <button className="btn btn-ghost btn-sm" onClick={discardRecording}>
@@ -234,7 +272,7 @@ export default function AudioRecorder({ onAudioReady }) {
 
         {transcriptStatus === 'done' && (
           <span className="tag tag-green" style={{ padding: '6px 12px', fontSize: 12 }}>
-            ✓ Transcription ready
+            ✓ Notes Generated
           </span>
         )}
       </div>

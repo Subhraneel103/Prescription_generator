@@ -28,10 +28,8 @@ const XIcon = () => (
 );
 
 const MOCK_PATIENTS = [
-  { id: 'p1', name: 'Priya Sharma', age: 34, gender: 'Female', abhaId: 'ABHA-1234-5678', phone: '+91-98765-43210', lastVisit: '2026-02-14', condition: 'Hypertension' },
-  { id: 'p2', name: 'Rajesh Kumar', age: 52, gender: 'Male', abhaId: 'ABHA-8765-4321', phone: '+91-87654-32109', lastVisit: '2026-01-28', condition: 'T2 Diabetes' },
-  { id: 'p3', name: 'Anita Patel', age: 28, gender: 'Female', abhaId: 'ABHA-2345-6789', phone: '+91-76543-21098', lastVisit: '2026-02-20', condition: 'Asthma' },
-  { id: 'p4', name: 'Suresh Nair', age: 45, gender: 'Male', abhaId: 'ABHA-3456-7890', phone: '+91-65432-10987', lastVisit: '2025-12-10', condition: 'Arthritis' },
+  { id: 'p1', name: 'Priya Sharma', age: 34, gender: 'Female', abha_id: 'ABHA-1234-5678', phone: '+91-98765-43210', condition: 'Hypertension' },
+  { id: 'p2', name: 'Rajesh Kumar', age: 52, gender: 'Male', abha_id: 'ABHA-8765-4321', phone: '+91-87654-32109', condition: 'T2 Diabetes' },
 ];
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -46,8 +44,23 @@ function NewPatientModal({ onClose, onAdd }) {
     if (!form.name || !form.age) return;
     setSaving(true);
     try {
-      const patient = await api.createPatient(form).catch(() => ({ ...form, id: `p_${Date.now()}` }));
-      onAdd(patient);
+      // 1. Map frontend state to Flask database schema
+      const payload = {
+        name: form.name,
+        age: parseInt(form.age, 10),
+        gender: form.gender,
+        phone: form.phone,
+        abha_id: form.abhaId // Map camelCase to snake_case
+      };
+      
+      const patientData = await api.createPatient(payload);
+      // Flask returns { message: "...", patient_id: X }, so we construct the local object
+      const newPatient = { ...payload, id: patientData.patient_id };
+      onAdd(newPatient);
+    } catch (err) {
+      console.error("Failed to save to DB, using mock:", err);
+      // Fallback for UI testing if DB is down
+      onAdd({ ...form, id: `p_${Date.now()}`, abha_id: form.abhaId });
     } finally {
       setSaving(false);
     }
@@ -119,20 +132,31 @@ export default function PatientSearch({ onSelect }) {
   const [showModal, setShowModal] = useState(false);
   const debounceRef = useRef(null);
 
+  // 2. Updated Search logic to hit our Flask GET /api/patients/ route
   const search = useCallback((q) => {
     if (!q.trim()) { setResults([]); return; }
     setLoading(true);
     clearTimeout(debounceRef.current);
+    
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await api.searchPatients(q).catch(() =>
-          MOCK_PATIENTS.filter((p) =>
-            p.name.toLowerCase().includes(q.toLowerCase()) ||
-            p.abhaId?.toLowerCase().includes(q.toLowerCase()) ||
-            p.phone?.includes(q)
-          )
+        // Fetch all patients from our DB
+        const dbPatients = await api.getPatients();
+        
+        // Filter locally based on the query
+        const filtered = dbPatients.filter((p) => 
+          p.name.toLowerCase().includes(q.toLowerCase()) || 
+          (p.abha_id && p.abha_id.toLowerCase().includes(q.toLowerCase())) ||
+          (p.phone && p.phone.includes(q))
         );
-        setResults(res);
+        
+        setResults(filtered.length > 0 ? filtered : MOCK_PATIENTS);
+      } catch (err) {
+        // Fallback to mock data if API fails
+        setResults(MOCK_PATIENTS.filter((p) =>
+          p.name.toLowerCase().includes(q.toLowerCase()) ||
+          p.abha_id?.toLowerCase().includes(q.toLowerCase())
+        ));
       } finally {
         setLoading(false);
       }
@@ -151,6 +175,7 @@ export default function PatientSearch({ onSelect }) {
     selectPatient(patient);
     setShowModal(false);
     notify(`Patient ${patient.name} added`, 'success');
+    if (onSelect) onSelect(patient); // Automatically advance wizard
   };
 
   return (
@@ -189,7 +214,7 @@ export default function PatientSearch({ onSelect }) {
               {currentPatient.age && <span className="tag tag-cyan">{currentPatient.age}y</span>}
               {currentPatient.gender && <span className="tag tag-blue">{currentPatient.gender}</span>}
               {currentPatient.bloodGroup && <span className="tag tag-red">{currentPatient.bloodGroup}</span>}
-              {currentPatient.abhaId && <span className="tag tag-violet">{currentPatient.abhaId}</span>}
+              {currentPatient.abha_id && <span className="tag tag-violet">{currentPatient.abha_id}</span>}
             </div>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={() => { selectPatient(null); }}>
@@ -239,7 +264,7 @@ export default function PatientSearch({ onSelect }) {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                      {p.age}y · {p.gender} · {p.abhaId || p.phone}
+                      {p.age}y · {p.gender} · {p.abha_id || p.phone}
                     </div>
                   </div>
                   {p.condition && <span className="tag tag-amber" style={{ fontSize: 10 }}>{p.condition}</span>}

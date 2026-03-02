@@ -122,8 +122,8 @@ export default function EHRDashboard({ patientId }) {
   }, [patientId]);
 
   // Use mock if no patientId
-  //const data = ehr || (patientId ? null : MOCK_EHR);
-  const data = ehr;
+  const data = ehr || (patientId ? null : MOCK_EHR);
+  // const data = ehr;
 
   if (loading) return (
     <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>

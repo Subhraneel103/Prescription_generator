@@ -28,7 +28,8 @@ const DownloadIcon = () => (
   </svg>
 );
 
-const EMPTY_MED = { name: '', dosage: '', frequency: '', duration: '', route: '', notes: '' };
+// Updated 'name' to 'medicine_name' to match the Flask LLM output
+const EMPTY_MED = { medicine_name: '', dosage: '', frequency: '', duration: '', route: '', notes: '' };
 const ROUTES = ['Oral', 'IV', 'IM', 'SC', 'Topical', 'Inhaled', 'Sublingual', 'Rectal'];
 const FREQUENCIES = ['Once daily', 'Twice daily', 'Thrice daily', 'Every 8 hrs', 'Every 6 hrs', 'At bedtime', 'As needed (PRN)', 'Stat'];
 
@@ -52,14 +53,14 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
             <input
               className="input"
               placeholder="Drug name (generic / brand)"
-              value={med.name}
-              onChange={(e) => onUpdate(index, 'name', e.target.value)}
+              value={med.medicine_name || ''} // Updated to medicine_name
+              onChange={(e) => onUpdate(index, 'medicine_name', e.target.value)}
               style={{ flex: 2, fontSize: 13, fontWeight: 600 }}
             />
             <input
               className="input"
               placeholder="Dosage (e.g. 500mg)"
-              value={med.dosage}
+              value={med.dosage || ''}
               onChange={(e) => onUpdate(index, 'dosage', e.target.value)}
               style={{ flex: 1, fontSize: 13 }}
             />
@@ -67,7 +68,7 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
           <div style={{ display: 'flex', gap: 8 }}>
             <select
               className="select"
-              value={med.frequency}
+              value={med.frequency || ''}
               onChange={(e) => onUpdate(index, 'frequency', e.target.value)}
               style={{ flex: 1, fontSize: 12 }}
             >
@@ -77,13 +78,13 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
             <input
               className="input"
               placeholder="Duration (e.g. 7 days)"
-              value={med.duration}
+              value={med.duration || ''}
               onChange={(e) => onUpdate(index, 'duration', e.target.value)}
               style={{ flex: 1, fontSize: 12 }}
             />
             <select
               className="select"
-              value={med.route}
+              value={med.route || ''}
               onChange={(e) => onUpdate(index, 'route', e.target.value)}
               style={{ flex: 1, fontSize: 12 }}
             >
@@ -95,7 +96,7 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
             <input
               className="input"
               placeholder="Special instructions / notes"
-              value={med.notes}
+              value={med.notes || ''}
               onChange={(e) => onUpdate(index, 'notes', e.target.value)}
               style={{ fontSize: 12 }}
             />
@@ -108,7 +109,7 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
             >
               {expanded ? 'Hide notes' : '+ Add notes'}
             </button>
-            {med.name && (
+            {med.medicine_name && (
               <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
                 {med.dosage && <span className="tag tag-cyan">{med.dosage}</span>}
                 {med.frequency && <span className="tag tag-blue">{med.frequency}</span>}
@@ -146,14 +147,14 @@ export default function PrescriptionCard() {
   const handleExport = () => {
     const lines = [
       '═══════════════════════════════════════',
-      '         PRESCRIPTION',
+      '        PRESCRIPTION',
       '═══════════════════════════════════════',
       `Patient: ${currentPatient?.name || 'N/A'}`,
       `Date: ${new Date().toLocaleDateString('en-IN')}`,
       '───────────────────────────────────────',
       '',
       ...prescription.map((m, i) =>
-        `${i + 1}. ${m.name} ${m.dosage}\n   ${m.frequency} × ${m.duration}\n   Route: ${m.route || 'Oral'}\n   ${m.notes ? `Notes: ${m.notes}` : ''}`
+        `${i + 1}. ${m.medicine_name} ${m.dosage}\n   ${m.frequency} × ${m.duration}\n   Route: ${m.route || 'Oral'}\n   ${m.notes ? `Notes: ${m.notes}` : ''}`
       ),
       '',
       '═══════════════════════════════════════',
@@ -181,6 +182,8 @@ export default function PrescriptionCard() {
               <DownloadIcon /> Export
             </button>
           )}
+          {/* Note: In our current architecture, generating happens automatically. 
+              This button is safe to keep as a UI element, but it triggers the context function. */}
           <button
             className="btn btn-primary btn-sm"
             onClick={generatePrescription}
@@ -223,7 +226,7 @@ export default function PrescriptionCard() {
         <MedicineRow key={i} med={med} index={i} onUpdate={updateMed} onRemove={removeMed} />
       ))}
 
-      <button className="btn btn-secondary" onClick={addMedicine} style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}>
+      <button className="btn btn-secondary" onClick={addMedicine} style={{ width: '100%', justifyContent: 'center', margin: '4px 0' }}>
         <PlusIcon /> Add Medicine
       </button>
     </div>
