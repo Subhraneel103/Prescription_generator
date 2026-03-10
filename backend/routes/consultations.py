@@ -31,27 +31,26 @@ def upload_consultation():
         # 2. Transcribe using Whisper
         transcript = transcribe_audio(filepath)
         
-        # 3. Generate SOAP using LLM
+        # 3. Generate SOAP using LLM (Ensure your new stricter prompt is in the service)
         soap_data = generate_soap(transcript)
         
-        # 4. Extract Prescriptions using LLM
-        prescriptions_data = extract_prescriptions(soap_data['plan'])
+        # 4. FIXED: Extract Prescriptions using broader context
+        # Combine Assessment and Plan to catch any "drifting" medications
+        medication_context = f"ASSESSMENT: {soap_data.get('assessment', '')}\nPLAN: {soap_data.get('plan', '')}"
+        prescriptions_data = extract_prescriptions(medication_context)
 
         # 5. Save everything to SQLite Database via SQLAlchemy
-        # doctor_id = get_jwt_identity() # Use this when JWT is active
-
-        doctor_id=1
+        doctor_id = 1 
 
         consultation = Consultation(
             patient_id=patient_id,
             doctor_id=doctor_id,
             audio_file=filepath,
-            raw_transcript=str(transcript) # Force string conversion
+            raw_transcript=str(transcript)
         )
         db.session.add(consultation)
         db.session.flush()
 
-        # Ensure these are strings, not dictionaries
         soap_note = SOAPNote(
             consultation_id=consultation.id,
             subjective=str(soap_data.get('subjective', '')),
@@ -63,19 +62,20 @@ def upload_consultation():
         db.session.flush()
 
         for rx in prescriptions_data:
-            # If rx is a dict, get() works; if it's already a string, this needs handling
-            prescription = Prescription(
-                soap_note_id=soap_note.id,
-                medicine_name=str(rx.get('medicine_name', '')),
-                dosage=str(rx.get('dosage', '')),
-                frequency=str(rx.get('frequency', '')),
-                duration=str(rx.get('duration', ''))
-            )
-            db.session.add(prescription)
+            # Check if rx is actually a dictionary before calling .get()
+            if isinstance(rx, dict):
+                prescription = Prescription(
+                    soap_note_id=soap_note.id,
+                    medicine_name=str(rx.get('medicine_name', 'Unknown')),
+                    dosage=str(rx.get('dosage', 'As directed')),
+                    frequency=str(rx.get('frequency', 'As directed')),
+                    duration=str(rx.get('duration', 'As directed'))
+                )
+                db.session.add(prescription)
 
         db.session.commit()
 
-        # 6. Return full payload to React Frontend
+        # 6. Return full payload
         return jsonify({
             "message": "Consultation processed successfully",
             "consultation_id": consultation.id,
