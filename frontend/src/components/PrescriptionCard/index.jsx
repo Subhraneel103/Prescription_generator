@@ -31,13 +31,23 @@ const DownloadIcon = () => (
 // Updated 'name' to 'medicine_name' to match the Flask LLM output
 const EMPTY_MED = { medicine_name: '', dosage: '', frequency: '', duration: '', route: '', notes: '' };
 const ROUTES = ['Oral', 'IV', 'IM', 'SC', 'Topical', 'Inhaled', 'Sublingual', 'Rectal'];
-const FREQUENCIES = ['Once daily', 'Twice daily', 'Thrice daily', 'Every 8 hrs', 'Every 6 hrs', 'At bedtime', 'As needed (PRN)', 'Stat'];
+const TIMING_OPTIONS = [
+  { label: 'After Food (PC)', value: 'PC' },
+  { label: 'Before Food (AC)', value: 'AC' },
+  { label: 'Empty Stomach', value: 'Empty Stomach' },
+  { label: 'With Food', value: 'With Food' }
+];
+const FREQUENCIES = [
+  '1-0-0 (OD)', '1-0-1 (BD)', '1-1-1 (TID)', '0-0-1 (HS)', 
+  'Once daily', 'Twice daily', 'Thrice daily', 'As needed (PRN)', 'Stat'
+];
 
 function MedicineRow({ med, index, onUpdate, onRemove }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <div className="rx-card" style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        {/* Index Circle */}
         <div style={{
           width: 28, height: 28, minWidth: 28,
           borderRadius: 6,
@@ -48,12 +58,14 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
         }}>
           {index + 1}
         </div>
+
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* First Row: Name and Dosage */}
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               className="input"
               placeholder="Drug name (generic / brand)"
-              value={med.medicine_name || ''} // Updated to medicine_name
+              value={med.medicine_name || ''}
               onChange={(e) => onUpdate(index, 'medicine_name', e.target.value)}
               style={{ flex: 2, fontSize: 13, fontWeight: 600 }}
             />
@@ -65,6 +77,8 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
               style={{ flex: 1, fontSize: 13 }}
             />
           </div>
+
+          {/* Second Row: Frequency, Duration, Route */}
           <div style={{ display: 'flex', gap: 8 }}>
             <select
               className="select"
@@ -92,6 +106,25 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
               {ROUTES.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
+
+          {/* THIRD ROW (NEW): Timing Selection */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select
+              className="select"
+              value={med.timing || 'PC'}
+              onChange={(e) => onUpdate(index, 'timing', e.target.value)}
+              style={{ 
+                flex: 1, 
+                fontSize: 11, 
+                backgroundColor: 'rgba(59,130,246,0.05)',
+                borderColor: 'rgba(59,130,246,0.2)' 
+              }}
+            >
+              {TIMING_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+            <div style={{ flex: 1 }} /> {/* Spacer */}
+          </div>
+
           {expanded && (
             <input
               className="input"
@@ -101,6 +134,8 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
               style={{ fontSize: 12 }}
             />
           )}
+
+          {/* Bottom Row Tags */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <button
               className="btn btn-ghost btn-sm"
@@ -111,9 +146,12 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
             </button>
             {med.medicine_name && (
               <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
-                {med.dosage && <span className="tag tag-cyan">{med.dosage}</span>}
-                {med.frequency && <span className="tag tag-blue">{med.frequency}</span>}
-                {med.duration && <span className="tag tag-amber">{med.duration}</span>}
+                {med.timing && (
+                  <span className={`tag ${med.timing === 'AC' ? 'tag-amber' : 'tag-blue'}`} style={{ fontSize: 9 }}>
+                    {med.timing}
+                  </span>
+                )}
+                {med.frequency && <span className="tag tag-cyan" style={{ fontSize: 9 }}>{med.frequency}</span>}
               </div>
             )}
           </div>
@@ -125,7 +163,6 @@ function MedicineRow({ med, index, onUpdate, onRemove }) {
     </div>
   );
 }
-
 export default function PrescriptionCard() {
   const { prescription, prescriptionStatus, generatePrescription, setPrescription, consultation, currentPatient, notify } = useConsultation();
 
@@ -154,8 +191,10 @@ export default function PrescriptionCard() {
       '───────────────────────────────────────',
       '',
       ...prescription.map((m, i) =>
-        `${i + 1}. ${m.medicine_name} ${m.dosage}\n   ${m.frequency} × ${m.duration}\n   Route: ${m.route || 'Oral'}\n   ${m.notes ? `Notes: ${m.notes}` : ''}`
-      ),
+    `${i + 1}. ${m.medicine_name} (${m.dosage})\n` +
+    `   ${m.frequency} x ${m.duration} [${m.timing}]\n` +
+    `   Route: ${m.route || 'Oral'}`
+),
       '',
       '═══════════════════════════════════════',
     ];

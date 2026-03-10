@@ -198,41 +198,53 @@ export function ConsultationProvider({ children }) {
 
   // ── Transcription ──
 const processConsultationAudio = useCallback(async () => {
-    // Requires a selected patient and an audio file
     if (!state.currentPatient || !state.audioBlob) return;
     
+    // Set all statuses to processing for the UI spinners
     dispatch({ type: ACTIONS.SET_TRANSCRIPT_STATUS, payload: 'processing' });
     dispatch({ type: ACTIONS.SET_SOAP_STATUS, payload: 'processing' });
     dispatch({ type: ACTIONS.SET_PRESCRIPTION_STATUS, payload: 'processing' });
     
     try {
       const formData = new FormData();
-      const fileName = state.audioBlob.name || 'recording.webm';
+      // Ensure we use a filename Whisper can recognize
+      const fileName = state.audioBlob.name || `consultation_${Date.now()}.wav`;
       formData.append('audio', state.audioBlob, fileName);
-      
       formData.append('patient_id', state.currentPatient.id);
 
-      // This single call hits Flask, runs Whisper, runs Llama-3, and saves to SQLite
+      // This single call triggers the Sanchit Gandhi Whisper model on the backend
       const res = await api.uploadAudio(formData);
       
-      // Update the entire UI state at once
-      dispatch({ type: ACTIONS.SET_CONSULTATION, payload: { id: res.consultation_id } });
+      // 1. Update Transcript
       dispatch({ type: ACTIONS.SET_TRANSCRIPT, payload: res.transcript });
       dispatch({ type: ACTIONS.SET_TRANSCRIPT_STATUS, payload: 'done' });
       
+      // 2. Update SOAP Note
       dispatch({ type: ACTIONS.SET_SOAP, payload: res.soap_note });
       dispatch({ type: ACTIONS.SET_SOAP_STATUS, payload: 'done' });
       
-      dispatch({ type: ACTIONS.SET_PRESCRIPTION, payload: res.prescriptions });
+      // 3. Update Prescription (Mapping new 'timing' field)
+      // We ensure 'timing' exists so the UI doesn't crash
+      const normalizedPrescriptions = res.prescriptions.map(rx => ({
+        ...rx,
+        timing: rx.timing || 'After Food (PC)' // Default if AI misses it
+      }));
+      
+      dispatch({ type: ACTIONS.SET_PRESCRIPTION, payload: normalizedPrescriptions });
       dispatch({ type: ACTIONS.SET_PRESCRIPTION_STATUS, payload: 'done' });
       
-      notify('AI processing complete!', 'success');
+      // 4. Update Consultation ID for future saves
+      dispatch({ type: ACTIONS.SET_CONSULTATION, payload: { id: res.consultation_id } });
+      
+      notify('Medical analysis complete!', 'success');
     } catch (err) {
       dispatch({ type: ACTIONS.SET_TRANSCRIPT_STATUS, payload: 'error' });
       dispatch({ type: ACTIONS.SET_SOAP_STATUS, payload: 'error' });
       dispatch({ type: ACTIONS.SET_PRESCRIPTION_STATUS, payload: 'error' });
-      notify('AI processing failed. Check console.', 'error');
-      console.error(err);
+      
+      const errorMsg = err.response?.data?.error || 'AI processing timed out. Please try again.';
+      notify(errorMsg, 'error');
+      console.error("AI Pipeline Error:", err);
     }
   }, [state.currentPatient, state.audioBlob, notify]);
 
