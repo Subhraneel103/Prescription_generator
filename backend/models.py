@@ -49,3 +49,4 @@ class Prescription(db.Model):
     dosage = db.Column(db.String(100), nullable=False)
     frequency = db.Column(db.String(100), nullable=False)
     duration = db.Column(db.String(100), nullable=False)
+    
