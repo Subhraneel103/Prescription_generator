@@ -2,23 +2,6 @@
 /.env
 frontend/node_modules/
 
-frontend/build/
-frontend/dist/
-
-frontend/.env
-frontend/.env.local
-frontend/.env.development.local
-frontend/.env.test.local
-frontend/.env.production.local
-
-# Logs
-frontend/npm-debug.log*
-frontend/yarn-debug.log*
-frontend/yarn-error.log*
-
-# Misc
-frontend/.cache/
-frontend/coverage/
 
 # OS files (these don't need a prefix, they can appear anywhere)
 .DS_Store
@@ -29,3 +12,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+backend/media
+/media
