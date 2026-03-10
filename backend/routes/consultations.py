@@ -6,12 +6,10 @@ from models import Consultation, SOAPNote, Prescription
 from services.transcription import transcribe_audio
 from services.soap_generator import generate_soap
 from services.prescription import extract_prescriptions
-# from flask_jwt_extended import jwt_required, get_jwt_identity 
 
 consultations_bp = Blueprint('consultations', __name__)
 
 @consultations_bp.route('/upload', methods=['POST'])
-# @jwt_required() # Uncomment when auth is ready
 def upload_consultation():
     if 'audio' not in request.files:
         return jsonify({"error": "No audio file provided"}), 400
@@ -28,18 +26,17 @@ def upload_consultation():
     audio_file.save(filepath)
 
     try:
-        # 2. Transcript creation using Whisper
+        # 2. Transcription using Sanchit Gandhi Medical Whisper
         transcript = transcribe_audio(filepath)
         
-        # 3. Generate SOAP using LLM (Ensure your new stricter prompt is in the service)
+        # 3. Generate SOAP using Medical LLM
         soap_data = generate_soap(transcript)
         
-        # 4. FIXED: Extract Prescriptions using broader context
-        # Combine Assessment and Plan to catch any "drifting" medications
+        # 4. Extract Prescriptions using combined context
         medication_context = f"ASSESSMENT: {soap_data.get('assessment', '')}\nPLAN: {soap_data.get('plan', '')}"
         prescriptions_data = extract_prescriptions(medication_context)
 
-        # 5. Save everything to SQLite Database via SQLAlchemy
+        # 5. Save everything to Database
         doctor_id = 1 
 
         consultation = Consultation(
@@ -63,23 +60,20 @@ def upload_consultation():
 
         for rx in prescriptions_data:
             if isinstance(rx, dict):
-                # We combine Timing (AC/PC) into the duration or frequency for the UI
-                timing_info = rx.get('timing', 'PC')
-                
+                # Now using the dedicated 'timing' column from your updated models.py
                 prescription = Prescription(
                     soap_note_id=soap_note.id,
                     medicine_name=str(rx.get('medicine_name', 'Unknown')),
                     dosage=str(rx.get('dosage', 'As directed')),
-                    # Stores shorthand like 1-0-1
-                    frequency=str(rx.get('frequency', '1-0-0')), 
-                    # Adds AC/PC info to the duration string
-                    duration=f"{rx.get('duration', 'As directed')} ({timing_info})"
+                    frequency=str(rx.get('frequency', '1-0-0')),
+                    duration=str(rx.get('duration', 'As directed')),
+                    timing=str(rx.get('timing', 'After Food (PC)')) # Dedicated field
                 )
                 db.session.add(prescription)
 
         db.session.commit()
 
-        # 6. Return full payload
+        # 6. Return payload
         return jsonify({
             "message": "Consultation processed successfully",
             "consultation_id": consultation.id,
@@ -90,4 +84,6 @@ def upload_consultation():
 
     except Exception as e:
         db.session.rollback()
+        # Log the error for debugging
+        print(f"Error processing consultation: {str(e)}")
         return jsonify({"error": str(e)}), 500
