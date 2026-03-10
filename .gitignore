@@ -7,11 +7,23 @@ frontend/node_modules/
 .DS_Store
 Thumbs.db
 
+
+
 # Editor
 .vscode/
 .idea/
 *.swp
 *.swo
 
-backend/media
+backend/media/
+*.mp4
+*.webm
+*.wav
+*.mp3
+*.ogg
+*.m4a
+*.aac
+
 /media
+
+backend/__pycache__/
