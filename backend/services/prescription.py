@@ -10,10 +10,22 @@ client = OpenAI(
 
 def extract_prescriptions(plan_text: str) -> list[dict]:
     prompt = f"""
-    Extract all medications prescribed in the following treatment plan.
-    Return ONLY a JSON array of objects with keys: "medicine_name", "dosage", "frequency", "duration".
-    If no medications are found, return an empty array [].
+    You are a professional clinical pharmacist. Extract medications from the treatment plan into a structured JSON array.
     
+    STANDARDS TO FOLLOW:
+    1. DOSAGE: Use metric units (mg, mcg, ml) or counts (1 tab, 2 caps).
+    2. FREQUENCY: Convert to standard clinical shorthand:
+       - "1-0-1" (Twice daily: Morning and Night)
+       - "1-1-1" (Thrice daily)
+       - "1-0-0" (Once daily: Morning / OD)
+       - "0-0-1" (Once daily: Night / HS)
+       - "SOS" (Only when needed / PRN)
+    3. TIMING: Note if "Before Food" (AC) or "After Food" (PC).
+
+    Return ONLY a JSON array of objects with keys: 
+    "medicine_name", "dosage", "frequency", "timing", "duration".
+    If no medications are found, return [].
+
     Plan:
     "{plan_text}"
     """

@@ -28,7 +28,7 @@ def upload_consultation():
     audio_file.save(filepath)
 
     try:
-        # 2. Transcribe using Whisper
+        # 2. Transcript creation using Whisper
         transcript = transcribe_audio(filepath)
         
         # 3. Generate SOAP using LLM (Ensure your new stricter prompt is in the service)
@@ -62,14 +62,18 @@ def upload_consultation():
         db.session.flush()
 
         for rx in prescriptions_data:
-            # Check if rx is actually a dictionary before calling .get()
             if isinstance(rx, dict):
+                # We combine Timing (AC/PC) into the duration or frequency for the UI
+                timing_info = rx.get('timing', 'PC')
+                
                 prescription = Prescription(
                     soap_note_id=soap_note.id,
                     medicine_name=str(rx.get('medicine_name', 'Unknown')),
                     dosage=str(rx.get('dosage', 'As directed')),
-                    frequency=str(rx.get('frequency', 'As directed')),
-                    duration=str(rx.get('duration', 'As directed'))
+                    # Stores shorthand like 1-0-1
+                    frequency=str(rx.get('frequency', '1-0-0')), 
+                    # Adds AC/PC info to the duration string
+                    duration=f"{rx.get('duration', 'As directed')} ({timing_info})"
                 )
                 db.session.add(prescription)
 

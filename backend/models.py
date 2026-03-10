@@ -14,7 +14,7 @@ class Patient(db.Model):
     age = db.Column(db.Integer, nullable=False)
     gender = db.Column(db.String(20), nullable=False)
     phone = db.Column(db.String(20), nullable=False)
-    abha_id = db.Column(db.String(50), unique=True, nullable=False)
+    abha_id = db.Column(db.String(50), unique=True, nullable=False,)
     
     consultations = db.relationship('Consultation', backref='patient', lazy=True)
 
