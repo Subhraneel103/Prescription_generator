@@ -3,6 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { useConsultation } from '../context/ConsultationContext';
 import * as api from '../api/client';
 
+function AnimatedGreeting({ text }) {
+  const words = text.split(' ');
+  
+  return (
+    <h1 style={{ fontFamily: 'var(--font-display)' }}>
+      {words.map((word, i) => (
+        <span
+          key={i}
+          style={{
+            display: 'inline-block',
+            marginRight: 8,
+            opacity: 0,
+            animation: `wordFadeIn 0.4s ease forwards`,
+            animationDelay: `${i * 0.2}s`,
+          }}
+        >
+          {word}
+        </span>
+      ))}
+    </h1>
+  );
+}
+
 // Fallback data if the backend database is empty or unreachable
 const MOCK_STATS = {
   todayConsultations: 0,
@@ -79,7 +102,7 @@ export default function Dashboard() {
   return (
     <div className="page-content fade-in">
       <div className="page-header">
-        <h1 style={{ fontFamily: "'Lora', serif" }}>{greeting()}, {user?.name || 'Dr. Anonymous'}</h1>
+        <AnimatedGreeting text={`${greeting()}, ${user?.name || 'Dr. Anonymous'}`} />
         <p>Here's your consultation overview for today — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</p>
       </div>
 

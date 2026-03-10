@@ -90,7 +90,7 @@ function Sidebar({ onLogout }) {
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">💊</div>
         <div>
-          <div className="sidebar-logo-text" style={{fontSize: '22px'}}>PrescribAI</div>
+          <div className="sidebar-logo-text" style={{fontSize: '24px'}}>PrescribAI</div>
         </div>
       </div>
 
@@ -110,29 +110,7 @@ function Sidebar({ onLogout }) {
           <UsersIcon /> Patient History
         </NavLink>
 
-        <span className="nav-section-label" style={{ marginTop: 8 }}>System</span>
-        <div style={{
-          padding: '8px 12px',
-          display: 'flex', alignItems: 'center', gap: 8,
-          borderRadius: 6,
-          background: 'rgba(16, 185, 129, 0.05)',
-          border: '1px solid rgba(16, 185, 129, 0.1)',
-          fontSize: 11,
-          fontFamily: 'var(--font-mono)',
-          color: 'var(--accent-green)',
-        }}>
-          <ShieldIcon /> ABDM Connected
-        </div>
-        <div style={{
-          padding: '8px 12px',
-          display: 'flex', alignItems: 'center', gap: 8,
-          borderRadius: 6,
-          fontSize: 11,
-          fontFamily: 'var(--font-mono)',
-          color: 'var(--accent-blue)',
-        }}>
-          <ShieldIcon /> FHIR R4 Active
-        </div>
+        
       </div>
 
       <div className="sidebar-footer">
